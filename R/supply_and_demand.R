@@ -34,6 +34,7 @@ linear_curve <- function(price_q0 = numeric(),
                                )
 
                                result <- list(
+
                                  name = name,
 
                                  funs =  function(quatity){.x + .y*quatity},
@@ -55,39 +56,83 @@ linear_curve <- function(price_q0 = numeric(),
       map(str_detect,"Demand") %>%
       reduce(sum)
 
+
+
     if(indicador == 0 |indicador == length(resources)){
 
-      names <- resources %>%
-        map_chr("name")
+      index <- 1:length(resources)
 
-      purrr::imap(
-        names,
-        ~{
-          alias <- str_sub(.x,1,1) %>% str_c(.,.y)
+      resources <- imap(resources,
+                        ~append(x = .x,
+                          values = list(index = .y))
+                    )
 
-          table <- tibble(
-            quantity = seq(from = 0,to = max(price_q0),by = 10)
-          )
+      # browser()
+
+      new_f <- function(name,
+               funs,
+               equation,
+               coeficients,
+               intercep,
+               index){
+
+        alias <- str_sub(name,1,1) %>% str_c(.,index)
 
 
-        }
-       )
+        lim_step <- list(
+          sup_lim_y = max(price_q0) * 1.25,
+
+          sup_lim_x = (intercep/((-1)*coeficients[2])) * 1.25
+        ) %>%
+          map(~{
+
+            val <- abs(.x)
+
+            step <- val %/% 10
+
+            step <- abs(step)
+
+            step <- case_when(abs(step) < 1 ~ 0.1,
+                              TRUE ~ 10^(nchar(step)))
+
+            list(
+              lim = val,
+              step = step
+            )
+          })
+
+        # browser()
+
+        table <- tibble(
+          quantity = seq(from = 0,
+                         to = lim_step$sup_lim_x$lim,
+                         by = lim_step$sup_lim_x$step)
+        )
+
+        table %>%
+          mutate(Price = funs(quantity)) %>%
+          rename_at("quantity",~alias)
+
+
+
+      }
+
+     curves_df <-  purrr::pmap(
+        resources %>% transpose,
+        new_f
+       ) %>%
+        reduce(full_join)
+
+     curves_df %>%
+       gather(variable,value,-Price) %>%
+       ggplot() +
+       geom_line(aes(x = value,y = Price,color = variable)) +
+       theme_light() +
+       labs(x = "Quantity",
+            color = "Curve")
     }
   }
 
 }
 
 
-lala <- function(table,
-                 var_fun){
-
-  name <- exp(var_fun$name)
-
-  funs <- exp(var_fun$funs)
-
-  table %>%
-    mutate({{name}} := funs(quatity))
-
-}
-
-# lala("D1")
