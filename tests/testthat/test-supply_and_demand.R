@@ -64,6 +64,28 @@ test_that("test_class", {
     expect_setequal(vector, expected = c(100,130))
 
 
+    rsc2 <- create_market(price_q0 = 100,
+                         slope= 2,
+                         perfect_e = 75)
+
+    expect_length(rsc2,n = 2)
+
+    values2 <- c(102,75)
+
+    walk2(funns,
+          values,~{
+
+            f <- .x
+
+            expect_is(f,class = "function")
+
+            expect_equal(f(1),.y)
+
+          })
+
+
+
+
 })
 
 
@@ -72,17 +94,10 @@ test_that("test_class", {
 
 test_that("test_market",{
 
+  # Initial test for consistency
   rsc <- create_market(price_q0 = c(100,130),
                        slope= c(2,-6))
 
-
-  # Consider extreme cases: supply and demands perfectly inelestic
-
-  # rsc2 <- create_market(price_q0 = c(100,130),
-                       # slope= c(1,-Inf))
-
-  # rsc3 <- create_market(price_q0 = c(100,130),
-                        # slope= c(0,-8))
 
   mkt <- linear_curve(rsc,
                       "Market of food")
@@ -90,6 +105,45 @@ test_that("test_market",{
 
 
  expect_is(mkt$market,class = "ggplot")
+
+ # Consider extreme cases: supply and demands perfectly inelestic
+
+ # Perfectly elastic demand:
+ rsc2 <- create_market(price_q0 = 50,
+                       slope= 1,
+                       perfect_e = -76)
+
+ # Perfectly elastic supply:
+ rsc3 <- create_market(price_q0 = 50,
+                       slope= -1,
+                       perfect_e = 76)
+
+ # Perfectly inelastic demand:
+ rsc4 <- create_market(price_q0 = 50,
+                       slope= 1,
+                       perfect_i = -32)
+
+ # Perfectly inelastic supply:
+ rsc5 <- create_market(price_q0 = 50,
+                       slope= -1,
+                       perfect_i = 32)
+
+ mkt2 <-
+   map(list(
+     rsc2,
+     rsc3,
+     rsc4,
+     rsc5
+   ),
+   linear_curve,
+ "Market of food"
+ )
+
+
+ walk(mkt2,~{
+   expect_is(.x$market,class = "ggplot")
+   expect_error(print(.x$market),NA)
+ })
 
 
 })
