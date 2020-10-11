@@ -1,40 +1,39 @@
 #' Plot a demand, supply or both curves for a market
 #'
-#' Consider the next linear expressiion for a supply (demand is the same especification but with a negative b) curve:
-#' $$P = a + b*q$$
-#' Then:
 #'
-#' @param price_q0 It's the parameter `a` and for both, demanded and/or supplied quantities are equal to 0
-#' @param slope Ir's the parameter `b` and it's the rate at wich prices changes due to a change of the quantity demanded or supplied
+#' @param market result from `create_market` function
+#' @param market_name A title for the analized market
 #'
 #' @importFrom magrittr %>%
 #' @return
 #'
 #' Return a list with some elements_
-#' * `market_plot` gives a ggplot2 graphic showin the market defined by the parameters
-#' * `cuts` if there are at least two curves defined, one for the demand curve and
-#' one for the supply returns a list with the prices and quantities in the each curve intersection
-#'
+#' * `curve` PLot of the analized market
+#' * `market` all the elements behind the market
+#' * `equilibrium` if at least one curve is a supply curve and at leat one is a demand curve then the equilibriums are calculated
 #' @export
 #' @examples
-
+#'
+#' # market <- create_market(price_q0 = c(100,200),slope = c(-1,1))
+#' # linear_curve(market = market,market_name = "Black market")
 linear_curve <- function(market,
                          market_name = NULL
-                         ){
-
-
+){
 
 
   stopifnot(class(market) == "market_curves")
 
+  # Determine if all curves are of the same kind
 
-  indicador <- market %>%
+  indicator <- market %>%
     purrr::map_chr("name") %>%
-    purrr::map(str_detect,"Demand") %>%
+    purrr::map(stringr::str_detect,"Demand") %>%
     purrr::reduce(sum)
 
 
-  if(indicador == 0 |indicador == length(market)){
+  if(indicator == 0 |indicator == length(market)){
+
+    # No equilibrium to be found
 
     index <- 1:length(market)
 
@@ -42,21 +41,22 @@ linear_curve <- function(market,
 
   }else{
 
+    # Calculate the equilibrium for that market
 
     index <- c("Demand","Supply") %>%
       purrr::map(~market %>%
-            purrr::map_chr("name") %>%
-            stringr::str_subset(pattern = .x)) %>%
+                   purrr::map_chr("name") %>%
+                   stringr::str_subset(pattern = .x)) %>%
       purrr::map(~1:length(.x)) %>%
       purrr::reduce(c)
 
-    d_curves <- market %>% keep(.p = ~ .x$name == "Demand curve")
+    d_curves <- market %>% purrr::keep(.p = ~ .x$name == "Demand curve")
 
-    s_curves <- market %>% keep(.p = ~ .x$name == "Supply curve")
+    s_curves <- market %>% purrr::keep(.p = ~ .x$name == "Supply curve")
 
 
     equilibrium <- c("coeficients","intercept") %>%
-      map(~{
+      purrr::map(~{
 
         attrib <- .x
 
@@ -78,13 +78,17 @@ linear_curve <- function(market,
       purrr::map(~solve(.x[[1]],.x[[2]]))
 
     equilibrium <- equilibrium %>%
-      map(~t(.x) %>% as_tibble %>%
-            rename_all(~c("optim_p","optim_q"))
+      purrr::map(~ t(.x) %>%
+                   tibble::as_tibble(.) %>%
+                   dplyr::rename_all(~c("optim_p","optim_q"))
       ) %>%
-      reduce(bind_rows) %>%
-      filter_all(all_vars(.>0)) %>%
-      rowid_to_column %>%
-      mutate(eq_nam = str_c("E",rowid," (q*=",round(optim_q,2)," ,p*=",round(optim_p,2),")"))
+      purrr::reduce(dplyr::bind_rows) %>%
+      dplyr::filter_all(dplyr::all_vars(.>0)) %>%
+      tibble::rowid_to_column(.) %>%
+      dplyr::mutate(eq_nam =
+                      stringr::str_c("E",rowid,
+                                     " (q*=",round(optim_q,2),
+                                     " ,p*=",round(optim_p,2),")"))
   }
 
 
@@ -96,7 +100,7 @@ linear_curve <- function(market,
                                 values = list(index = .y))
   )
 
-  price_q0 <- purrr::map(market,"coeficients") %>% reduce(max)
+  price_q0 <- purrr::map(market,"coeficients") %>% purrr::reduce(max)
 
   curves_df <-  purrr::pmap(
     market %>%
@@ -108,15 +112,15 @@ linear_curve <- function(market,
              intercept,
              index){
 
-      alias <- stringr::str_sub(name,1,1) %>% stringr::str_c(.,index)
-
+      alias <- stringr::str_sub(name,1,1) %>%
+        stringr::str_c(.,index)
 
       lim_step <- list(
         sup_lim_y = price_q0 * 1.25,
 
         sup_lim_x = (intercept/((-1)*coeficients[2])) * 1.25
       ) %>%
-        map(~{
+        purrr::map(~{
 
           val <- abs(.x)
 
@@ -125,7 +129,7 @@ linear_curve <- function(market,
           step <- abs(step)
 
           step <- dplyr::case_when(abs(step) < 1 ~ 0.1,
-                            TRUE ~ 10^(nchar(step)))
+                                   TRUE ~ 10^(nchar(step)))
 
           list(
             lim = val,
@@ -143,7 +147,7 @@ linear_curve <- function(market,
 
       table %>%
         dplyr::mutate(Price = funs(quantity)) %>%
-        dplyr::rename_at("quantity",~str_c(alias,equation))
+        dplyr::rename_at("quantity",~stringr::str_c(alias,equation))
 
 
 
@@ -153,10 +157,10 @@ linear_curve <- function(market,
 
   curves_df <- curves_df %>%
     tidyr::gather(variable,value,-Price) %>%
-    mutate(variable = str_replace(variable,"\\+ \\-","- "),
-           variable = factor(variable))
+    dplyr::mutate(variable = stringr::str_replace(variable,"\\+ \\-","- "),
+                  variable = factor(variable))
 
-  if(indicador == 0 |indicador == length(market)){
+  if(indicator == 0 |indicator == length(market)){
     plot <-
       curves_df %>%
       ggplot2::ggplot() +
@@ -165,8 +169,8 @@ linear_curve <- function(market,
       ggplot2::labs(x = "Quantity",
                     color = "Curve",
                     title = market_name) +
-      scale_color_discrete(label = map(levels(curves_df$variable),latex2exp::TeX)) +
-      theme_light()
+      ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
+                                                       latex2exp::TeX))
 
   }else{
     plot <-
@@ -177,27 +181,30 @@ linear_curve <- function(market,
       ggplot2::labs(x = "Quantity",
                     color = "Curve",
                     title = market_name) +
-      geom_segment(data = equilibrium,
-                   aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),linetype = "dashed") +
-      geom_segment(data = equilibrium,
-                   aes(y = 0,yend =optim_p, x = optim_q,xend = optim_q),linetype = "dashed") +
-      geom_point(data = equilibrium,
-                 aes(x = optim_q,y=optim_p)) +
-      geom_text(data = equilibrium,
-                aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
-      geom_hline(aes(yintercept = 0)) +
-      geom_vline(aes(xintercept = 0)) +
-      scale_color_discrete(label = map(levels(curves_df$variable),latex2exp::TeX)) +
-      theme_light()
+      ggplot2::geom_segment(data = equilibrium,
+                            ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),
+                            linetype = "dashed") +
+      ggplot2::geom_segment(data = equilibrium,
+                            ggplot2::aes(y = 0,yend =optim_p, x = optim_q,xend = optim_q),
+                            linetype = "dashed") +
+      ggplot2::geom_point(data = equilibrium,
+                          ggplot2::aes(x = optim_q,y=optim_p)) +
+      ggplot2::geom_text(data = equilibrium,
+                         ggplot2::aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
+      ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
+      ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
+      ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
+                                                       latex2exp::TeX)) +
+      ggplot2::theme_light()
 
   }
 
-   market <-
+  market <-
     list(curves = market,
          market = plot ,
          cross_points = equilibrium)
 
-   return(market)
+  return(market)
 
 }
 
@@ -253,7 +260,7 @@ create_market <- function(price_q0,
                              ~{
 
                                name <-  dplyr::case_when(
-                                 .y > 0 ~ "Supply curve",
+                                 .y >= 0 ~ "Supply curve",
                                  .y < 0 ~ "Demand curve"
                                )
 

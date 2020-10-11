@@ -4,18 +4,26 @@
 \alias{linear_curve}
 \title{Plot a demand, supply or both curves for a market}
 \usage{
-linear_curve(price_q0 = numeric(), slope = numeric())
+linear_curve(market, market_name = NULL)
 }
 \arguments{
-\item{price_q0}{It's the parameter \code{a} and for both, demanded and/or supplied quantities are equal to 0}
+\item{market}{result from \code{create_market} function}
 
-\item{slope}{Ir's the parameter \code{b} and it's the rate at wich prices changes due to a change of the quantity demanded or supplied}
+\item{market_name}{A title for the analized market}
 }
 \value{
-
+Return a list with some elements_
+\itemize{
+\item \code{curve} PLot of the analized market
+\item \code{market} all the elements behind the market
+\item \code{equilibrium} if at least one curve is a supply curve and at leat one is a demand curve then the equilibriums are calculated
+}
 }
 \description{
-Consider the next linear expressiion for a supply (demand is the same especification but with a negative b) curve:
-$$P = a + b*q$$
-Then:
+Plot a demand, supply or both curves for a market
+}
+\examples{
+
+# market <- create_market(price_q0 = c(100,200),slope = c(-1,1))
+# linear_curve(market = market,market_name = "Black market")
 }

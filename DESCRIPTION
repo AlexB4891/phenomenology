@@ -29,4 +29,5 @@ Imports:
     stringr,
     rlang,
     lubridate,
-    janitor
+    janitor,
+    latex2exp
