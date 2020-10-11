@@ -71,7 +71,7 @@ linear_curve <- function(market,
           })
 
         purrr::cross2(insumos$D,insumos$S) %>%
-          purrr::map(reduce,rbind)
+          purrr::map(purrr::reduce,rbind)
 
       }) %>%
       purrr::transpose(.) %>%
@@ -116,10 +116,10 @@ linear_curve <- function(market,
         stringr::str_c(.,index)
 
       lim_step <- list(
-        sup_lim_y = case_when(coeficients[2] != 0 ~ price_q0 * 1.25,
+        sup_lim_y = dplyr::case_when(coeficients[2] != 0 ~ price_q0 * 1.25,
                               TRUE ~ intercept*1.25),
 
-        sup_lim_x = case_when(coeficients[2] != 0 ~ (intercept/((-1)*coeficients[2])) * 1.25,
+        sup_lim_x = dplyr::case_when(coeficients[2] != 0 ~ (intercept/((-1)*coeficients[2])) * 1.25,
                               TRUE ~ funs(price_q0) * 1.25)
       ) %>%
         purrr::map(~{
