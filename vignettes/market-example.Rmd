@@ -1,0 +1,91 @@
+---
+title: "Example of use of phenomenology package"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Example of use of phenomenology package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+First load `phenomenology` package. It provides some function to learn microeconomics using R.
+
+```{r setup}
+library(phenomenology)
+```
+
+After loading it, we must understand how it works.
+
+1.  Consider the next equation:
+
+    $$P = \alpha + \beta Q$$ In economics there's this convention to plot prices in the `y` axis. But we are interested in how quantities change as the prices changes. Like in this expression:
+
+    $$Q = \frac{\alpha}{\beta } - \frac{1}{\beta }P$$ The sign of $\beta$ is the key. It determine if you are talking about supply (positive) or demand (negative).
+
+2.  Functions inside `phenomenology` package work using the first definition. Then:
+
+    -   $\beta$ becomes `slope` argument and it's the rate at which prices fall or increase due to changes in quantity.
+
+    -   $\alpha$ turns in `price_q0` and it's the price that leads to a complete fall on quantity, also known as the intercept with the `y` axis.
+
+    Having this definitions in mind let's create our first market example:
+
+```{r demand}
+
+demand <- create_market(price_q0 = 100,
+              slope = -2)
+
+str(demand)
+
+```
+
+The `create_market` function is our first step. Above I defined a demand curve following the next definition:
+
+$$
+P = 100 - 2Q_D
+$$
+
+But markets are composed by at least two parts, so we must add our supply curve:
+
+$$
+P = 30 + 3.5Q_s
+$$
+
+This is easily done with the `create_market` function:
+
+```{r market_def}
+market <- create_market(
+  price_q0 = c(100,30), #
+  slope = c(-2,3.5))
+
+str(market)
+```
+
+Now we have a little more complex structure. As you can see when I declared just the demand curve, I got a list of 5 elements that defines the curve (see package documentation). Now I got a nested list with that same structure but defined for each pair of `price_q0` and `slope`. And so easy you have your market definition.
+
+Until now we build our materials to make the analysis. Now let me introduce the `linear_curve` package.
+
+```{r analysis}
+analisis <- linear_curve(market = market,
+             market_name = "Chocolate market in black market")
+
+names(analisis)
+```
+
+This new element has some interesting outputs (check package documentation). Here we will focus in `market:`
+
+```{r plot_market,fig.width= 7,fig.height= 5}
+plot <- analisis$market
+
+print(plot)
+```
+## Interpretation
+
+Interesting result. Let's apply some concepts. The point *E1* is the equilibrium in the market. In this point consumers and suppliers have agreed in a price of `r round(dplyr::pull(analisis$cross_points,optim_p))` and the quantity demanded or supplied in that point is 
+`r round(dplyr::pull(analisis$cross_points,optim_q))`

@@ -4,7 +4,7 @@
 \alias{create_market}
 \title{Create a series of elements to analize market's dinamic}
 \usage{
-create_market(price_q0, slope)
+create_market(price_q0, slope, perfect_e = NULL, perfect_i = NULL)
 }
 \arguments{
 \item{price_q0}{It's the parameter \code{a} and for both, demanded and/or supplied quantities are equal to 0}
