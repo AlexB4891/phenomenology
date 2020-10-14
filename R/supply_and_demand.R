@@ -172,6 +172,21 @@ linear_curve <- function(market,
     dplyr::mutate(variable = stringr::str_replace(variable,"\\+ \\-","- "),
                   variable = factor(variable))
 
+  curves_df %>%
+    split(.$variable) %>%
+    purrr::map(~{
+      .x %>%
+        dplyr::mutate(
+          Price = dplyr::if_else(Price = 1,
+                                 NA_real_,
+                                 Price)) %>%
+        dplyr::mutate_at(.vars = c("Price",
+                                   "value"),
+                         .funs = list(~dplyr::case_when(
+                           is.na(.) & (lag(.))
+                         )))
+    })
+
 
   # browser()
 
@@ -188,30 +203,53 @@ linear_curve <- function(market,
                                                         latex2exp::TeX))
 
   }else{
-    plot <-
-      curves_df %>%
-      ggplot2::ggplot() +
-      ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable)) +
-      ggplot2::theme_light() +
-      ggplot2::labs(x = "Quantity",
-                    color = "Curve",
-                    title = market_name) +
-      ggplot2::geom_segment(data = equilibrium,
-                            ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),
-                            linetype = "dashed") +
-      ggplot2::geom_segment(data = equilibrium,
-                            ggplot2::aes(y = 0,yend =optim_p, x = optim_q,xend = optim_q),
-                            linetype = "dashed") +
-      ggplot2::geom_point(data = equilibrium,
-                          ggplot2::aes(x = optim_q,y=optim_p)) +
-      ggplot2::geom_text(data = equilibrium,
-                         ggplot2::aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
-      ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
-      ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
-      ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
-                                                        latex2exp::TeX)) +
-      ggplot2::theme_light()
 
+    if(nrow(equilibrium) != 0){
+
+
+      inelastic_curves <- market %>%
+        purrr::map("coeficients") %>%
+        purrr::map(~.x[1]) %>%
+        purrr::reduce(c)
+
+
+      if(any(inelastic_curves == 0)){
+        plot <-
+          curves_df %>%
+          ggplot2::ggplot() +
+          ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable)) +
+          ggplot2::labs(x = "Quantity",
+                        color = "Curve",
+                        title = market_name)
+
+      }
+
+
+
+
+
+      plot +
+        ggplot2::geom_segment(data = equilibrium,
+                              ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),
+                              linetype = "dashed") +
+        ggplot2::geom_segment(data = equilibrium,
+                              ggplot2::aes(y = 0,yend =optim_p, x = optim_q,xend = optim_q),
+                              linetype = "dashed") +
+        ggplot2::geom_point(data = equilibrium,
+                            ggplot2::aes(x = optim_q,y=optim_p)) +
+        ggplot2::geom_text(data = equilibrium,
+                           ggplot2::aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
+        ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
+        ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
+        ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
+                                                          latex2exp::TeX)) +
+        ggplot2::theme_light()
+
+    }else{
+
+      message("Curves intersect at negative values")
+
+    }
   }
 
   market <-
@@ -321,20 +359,15 @@ create_market <- function(price_q0,
                                       name = name,
 
                                       funs =  function(quatity){
-                                        dplyr::case_when(
-                                          .x >= 0 ~ .x,
-                                          .x < 0 ~ -.x
-                                        ) },
+                                        abs(.x) },
 
                                       equation = stringr::str_c("$: P = ",
-                                                                .x,"$"),
+                                                                abs(.x),"$"),
 
                                       coeficients= c(1, 0),
 
-                                      intercept = dplyr::case_when(
-                                        .x >= 0 ~ .x,
-                                        .x < 0 ~ -.x
-                                      ))
+                                      intercept = abs(.x)
+                                      )
 
                                     return(result)
 
@@ -360,20 +393,15 @@ create_market <- function(price_q0,
                                         name = name,
 
                                         funs =  function(price){
-                                          dplyr::case_when(
-                                            .x >= 0 ~ .x,
-                                            .x < 0 ~ -.x
-                                          ) },
+                                          abs(.x)
+                                           },
 
                                         equation = stringr::str_c("$: Q = ",
-                                                                  .x,"$"),
+                                                                  abs(.x),"$"),
 
                                         coeficients= c(0, 1),
 
-                                        intercept = dplyr::case_when(
-                                          .x >= 0 ~ .x,
-                                          .x < 0 ~ -.x
-                                        ))
+                                        intercept = abs(.x))
 
                                       return(result)
 
@@ -393,5 +421,20 @@ create_market <- function(price_q0,
 
   resources <- structure(resources,class = "market_curves")
   return(resources)
+}
+
+
+#' Fill NA in a sequence vector with constant step
+#'
+#' @param vector sequence vector with constant step with NA
+#'
+#' @return Filled vector
+#' @export
+#'
+#' @examples
+fill_sequence_vector <- function(vector){
+
+  dplyr::lag(vector,1) - dplyr::lag(vector,2)
+
 }
 
