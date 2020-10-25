@@ -15,8 +15,8 @@
 #' @examples
 #'
 #' # market <- create_market(price_q0 = c(100,200),slope = c(-1,1))
-#' # linear_curve(market = market,market_name = "Black market")
-linear_curve <- function(market,
+#' # supply_and_demand(market = market,market_name = "Black market")
+supply_and_demand <- function(market,
                          market_name = NULL
 ){
 
@@ -50,9 +50,11 @@ linear_curve <- function(market,
       purrr::map(~1:length(.x)) %>%
       purrr::reduce(c)
 
-    d_curves <- market %>% purrr::keep(.p = ~ .x$name == "Demand curve")
+    d_curves <- market %>%
+      purrr::keep(.p = ~ .x$name == "Demand curve")
 
-    s_curves <- market %>% purrr::keep(.p = ~ .x$name == "Supply curve")
+    s_curves <- market %>%
+      purrr::keep(.p = ~ .x$name == "Supply curve")
 
 
     equilibrium <- c("coeficients","intercept") %>%
@@ -100,7 +102,10 @@ linear_curve <- function(market,
                                 values = list(index = .y))
   )
 
-  price_q0 <- purrr::map(market,"coeficients") %>% purrr::reduce(max)
+  # browser()
+
+  price_q0 <- purrr::map(market,"intercept") %>%
+    purrr::reduce(max)
 
   curves_df <-  purrr::pmap(
     market %>%
@@ -154,7 +159,7 @@ linear_curve <- function(market,
       }else if(coeficients[1] == 0){
         table <- table %>%
           dplyr::mutate(
-            Price = 1,
+            Price = quantity,
             quantity = funs(Price)) %>%
           dplyr::rename_at("quantity",~stringr::str_c(alias,equation))
       }
@@ -176,7 +181,7 @@ linear_curve <- function(market,
   # browser()
 
   if(indicator == 0 |indicator == length(market)){
-    plot <-
+    market_plot <-
       curves_df %>%
       ggplot2::ggplot() +
       ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable)) +
@@ -188,35 +193,57 @@ linear_curve <- function(market,
                                                         latex2exp::TeX))
 
   }else{
-    plot <-
-      curves_df %>%
-      ggplot2::ggplot() +
-      ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable)) +
-      ggplot2::theme_light() +
-      ggplot2::labs(x = "Quantity",
-                    color = "Curve",
-                    title = market_name) +
-      ggplot2::geom_segment(data = equilibrium,
-                            ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),
-                            linetype = "dashed") +
-      ggplot2::geom_segment(data = equilibrium,
-                            ggplot2::aes(y = 0,yend =optim_p, x = optim_q,xend = optim_q),
-                            linetype = "dashed") +
-      ggplot2::geom_point(data = equilibrium,
-                          ggplot2::aes(x = optim_q,y=optim_p)) +
-      ggplot2::geom_text(data = equilibrium,
-                         ggplot2::aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
-      ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
-      ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
-      ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
-                                                        latex2exp::TeX)) +
-      ggplot2::theme_light()
 
+    # browser()
+
+    if(nrow(equilibrium) != 0){
+
+#
+#       inelastic_curves <- market %>%
+#         purrr::map("coeficients") %>%
+#         purrr::map(~.x[1]) %>%
+#         purrr::reduce(c)
+
+
+      # if(any(inelastic_curves == 0)){
+        market_plot <-
+          curves_df %>%
+          ggplot2::ggplot() +
+          ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable)) +
+          ggplot2::labs(x = "Quantity",
+                        color = "Curve",
+                        title = market_name)
+
+      # }else{C
+
+
+      market_plot <- market_plot +
+        ggplot2::geom_segment(data = equilibrium,
+                              ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),
+                              linetype = "dashed") +
+        ggplot2::geom_segment(data = equilibrium,
+                              ggplot2::aes(y = 0,yend =optim_p, x = optim_q,xend = optim_q),
+                              linetype = "dashed") +
+        ggplot2::geom_point(data = equilibrium,
+                            ggplot2::aes(x = optim_q,y=optim_p)) +
+        ggplot2::geom_text(data = equilibrium,
+                           ggplot2::aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
+        ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
+        ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
+        ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
+                                                          latex2exp::TeX)) +
+        ggplot2::theme_light()
+
+    }else{
+      market_plot <- NULL
+      message("Curves intersect at negative values")
+
+    }
   }
 
   market <-
     list(curves = market,
-         market = plot ,
+         market = market_plot ,
          cross_points = equilibrium)
 
   return(market)
@@ -232,7 +259,9 @@ linear_curve <- function(market,
 #' \deqn{$$P = a + bx$$}
 #'
 #' @param price_q0 It's the parameter `a` and for both, demanded and/or supplied quantities are equal to 0
-#' @param slope Ir's the parameter `b` and it's the rate at wich prices changes due to a change of the quantity demanded or supplied#'
+#' @param slope It's the parameter `b` and it's the rate at wich prices changes due to a change of the quantity demanded or supplied#'
+#' @param perfect_e Extreme cases for perfectly elastic demand (-) or supply(+)
+#' @param perfect_i Extreme cases for perfectly inelastic demand (-) or supply(+)
 #' @return
 #'
 #' A list with all the market needed to construct our market
@@ -260,8 +289,18 @@ linear_curve <- function(market,
 #' # Works the same way for many supply curves
 create_market <- function(price_q0,
                           slope,
-                          perfect_e = NULL,
-                          perfect_i = NULL){
+                          perfect_e = NA_real_,
+                          perfect_i = NA_real_){
+
+
+  # browser()
+  # e_ind <- switch (perfect_e,
+  #   NA = NULL
+  # )
+  #
+  # i_ind <- switch (perfect_i,
+  #                  NA = NULL
+  # )
 
   # For finite values of the slope:
 
@@ -306,7 +345,9 @@ create_market <- function(price_q0,
 
   # Perfectly elastic demand or supply curves:
 
-  if(!is.null(perfect_e)){
+  el_ind <- sum(!is.null(perfect_e), !is.na(perfect_e))
+
+  if(el_ind == 2){
 
     perfect_elastic <- purrr::map(perfect_e,
                                   ~{
@@ -321,20 +362,15 @@ create_market <- function(price_q0,
                                       name = name,
 
                                       funs =  function(quatity){
-                                        dplyr::case_when(
-                                          .x >= 0 ~ .x,
-                                          .x < 0 ~ -.x
-                                        ) },
+                                        abs(.x) },
 
                                       equation = stringr::str_c("$: P = ",
-                                                                .x,"$"),
+                                                                abs(.x),"$"),
 
                                       coeficients= c(1, 0),
 
-                                      intercept = dplyr::case_when(
-                                        .x >= 0 ~ .x,
-                                        .x < 0 ~ -.x
-                                      ))
+                                      intercept = abs(.x)
+                                      )
 
                                     return(result)
 
@@ -345,7 +381,9 @@ create_market <- function(price_q0,
 
   # Perfectly inelastic demand or supply curves:
 
-  if(!is.null(perfect_i)){
+  inel_ind <- sum(!is.null(perfect_i), !is.na(perfect_i))
+
+  if(inel_ind == 2){
 
     perfect_inelastic <- purrr::map(perfect_i,
                                     ~{
@@ -360,20 +398,15 @@ create_market <- function(price_q0,
                                         name = name,
 
                                         funs =  function(price){
-                                          dplyr::case_when(
-                                            .x >= 0 ~ .x,
-                                            .x < 0 ~ -.x
-                                          ) },
+                                          abs(.x)
+                                           },
 
                                         equation = stringr::str_c("$: Q = ",
-                                                                  .x,"$"),
+                                                                  abs(.x),"$"),
 
                                         coeficients= c(0, 1),
 
-                                        intercept = dplyr::case_when(
-                                          .x >= 0 ~ .x,
-                                          .x < 0 ~ -.x
-                                        ))
+                                        intercept = abs(.x))
 
                                       return(result)
 
@@ -394,4 +427,7 @@ create_market <- function(price_q0,
   resources <- structure(resources,class = "market_curves")
   return(resources)
 }
+
+
+
 

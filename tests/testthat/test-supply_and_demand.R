@@ -99,48 +99,34 @@ test_that("test_market",{
                        slope= c(2,-6))
 
 
-  mkt <- linear_curve(rsc,
+  mkt <- supply_and_demand(rsc,
                       "Market of food")
 
 
 
  expect_is(mkt$market,class = "ggplot")
 
- # Consider extreme cases: supply and demands perfectly inelestic
-
- # Perfectly elastic demand:
- rsc2 <- create_market(price_q0 = 50,
-                       slope= 1,
-                       perfect_e = -76)
-
- # Perfectly elastic supply:
- rsc3 <- create_market(price_q0 = 50,
-                       slope= -1,
-                       perfect_e = 76)
-
- # Perfectly inelastic demand:
- rsc4 <- create_market(price_q0 = 50,
-                       slope= 1,
-                       perfect_i = -32)
-
- # Perfectly inelastic supply:
- rsc5 <- create_market(price_q0 = 50,
-                       slope= -1,
-                       perfect_i = 32)
-
- mkt2 <-
-   map(list(
-     rsc2,
-     rsc3,
-     rsc4,
-     rsc5
-   ),
-   linear_curve,
- "Market of food"
- )
+ ejemplos <- tibble::tibble(
+   price_q0 = c(50,50,50,50),
+   slope= c(1,-1,1,-1),
+   perfect_e = c(-76,41,NA,NA),
+   perfect_i = c(NA,NA,-32,32)
+ ) %>%
+   pmap(create_market)
 
 
- walk(mkt2,~{
+ plots <- map2(.x = ejemplos,
+               .y = list(
+                 "Supply + Perfectly elastic demand",
+                 "Demand + Perfectly elastic supply",
+                 "Supply + Perfectly inelastic demand",
+                 "Demand + Perfectly inelastic supply"
+               ),~supply_and_demand(market = .x,market_name = .y))
+
+
+
+
+ walk(plots,~{
    expect_is(.x$market,class = "ggplot")
    expect_error(print(.x$market),NA)
  })
