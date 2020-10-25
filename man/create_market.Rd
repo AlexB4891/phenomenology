@@ -4,12 +4,16 @@
 \alias{create_market}
 \title{Create a series of elements to analize market's dinamic}
 \usage{
-create_market(price_q0, slope, perfect_e = NULL, perfect_i = NULL)
+create_market(price_q0, slope, perfect_e = NA_real_, perfect_i = NA_real_)
 }
 \arguments{
 \item{price_q0}{It's the parameter \code{a} and for both, demanded and/or supplied quantities are equal to 0}
 
-\item{slope}{Ir's the parameter \code{b} and it's the rate at wich prices changes due to a change of the quantity demanded or supplied#'}
+\item{slope}{It's the parameter \code{b} and it's the rate at wich prices changes due to a change of the quantity demanded or supplied#'}
+
+\item{perfect_e}{Extreme cases for perfectly elastic demand (-) or supply(+)}
+
+\item{perfect_i}{Extreme cases for perfectly inelastic demand (-) or supply(+)}
 }
 \value{
 A list with all the market needed to construct our market
