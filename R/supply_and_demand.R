@@ -112,6 +112,7 @@ supply_and_demand <- function(market,
       purrr::transpose(.),
     function(name,
              funs,
+             funs_q,
              equation,
              coeficients,
              intercept,
@@ -121,22 +122,15 @@ supply_and_demand <- function(market,
         stringr::str_c(.,index)
 
       lim_step <- list(
-        sup_lim_y = dplyr::case_when(coeficients[2] != 0 ~ price_q0 * 1.25,
-                              TRUE ~ intercept*1.25),
+        sup_lim_y = funs(funs_q(0)),
 
-        sup_lim_x = dplyr::case_when(coeficients[2] != 0 ~ (intercept/((-1)*coeficients[2])) * 1.25,
-                              TRUE ~ funs(price_q0) * 1.25)
+        sup_lim_x = funs_q(0)
       ) %>%
         purrr::map(~{
 
           val <- abs(.x)
 
-          step <- val %/% 10
-
-          step <- abs(step)
-
-          step <- dplyr::case_when(abs(step) < 1 ~ 0.1,
-                                   TRUE ~ 10^(nchar(step)))
+          step <- 0.01
 
           list(
             lim = val,
@@ -170,15 +164,40 @@ supply_and_demand <- function(market,
   ) %>%
     purrr::reduce(dplyr::full_join)
 
-  # browser()
+
 
   curves_df <- curves_df %>%
     tidyr::gather(variable,value,-Price) %>%
     dplyr::mutate(variable = stringr::str_replace(variable,"\\+ \\-","- "),
                   variable = factor(variable))
 
+  curves_df <- curves_df %>%
+    split(.$variable) %>%
+    map2(market,
+         ~{
+           .x %>%
+             mutate(value = if_else(is.na(value),.y$funs_q(Price),value))
+         }) %>%
+    reduce(rbind) %>%
+    filter(value>=0)
 
+  value_max <- curves_df %>%
+    split(.$variable) %>%
+    map_dbl(~.x %>% pull(value) %>% max)
+  # %>%
+  #   min
+
+  demand_v <- str_detect(names(value_max),"D[:digit:].*")
+
+  if(length(demand_v)>0){
+    value_max <- value_max[demand_v]
+  }else{
+    value_max <- min(value_max)
+  }
   # browser()
+
+
+
 
   if(indicator == 0 |indicator == length(market)){
     market_plot <-
@@ -230,6 +249,7 @@ supply_and_demand <- function(market,
                            ggplot2::aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
         ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
         ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
+        ggplot2::xlim(0,value_max)+
         ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
                                                           latex2exp::TeX)) +
         ggplot2::theme_light()
@@ -328,6 +348,8 @@ create_market <- function(price_q0,
                                  name = name,
 
                                  funs =  function(quatity){.x + .y*quatity},
+
+                                 funs_q =  function(price){  (1/.y)*price - (.x/.y)},
 
                                  equation = stringr::str_c("$: P = ",
                                                            .x," + ",

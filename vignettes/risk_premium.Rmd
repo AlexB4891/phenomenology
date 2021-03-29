@@ -1,0 +1,238 @@
+---
+title: "risk_premium"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{risk_premium}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(phenomenology)
+```
+
+-   Total wealth during the life time is 2.000.000\$.
+-   A normal weight person face a 20% chance of getting type II diabetes
+-   A overweight person face a 30% chance of getting type II diabetes
+-   Utility function: $U = \sqrt(C)$
+-   Total cost of facing diabetes is 85.000\$
+
+**Solution**:
+
+If the person is certain that he/she will not face diabetes:
+
+```{r}
+ ex_ut <- expected_utility(earnings = 0,
+                  losings = 0,
+                  probabilities = c(1,0),
+                  endowment = 2e6,
+                  u_function = sqrt)
+
+```
+
+In order to calculate the risk premium we should understand that it is the value that a person is willing to pay in order to avoid the risk. In other words is the value that makes that the expected utility from the certain option is equal to the risky option. In this case the utility of not pay for insurance is `r ex_ut`
+
+First we compute the expected value (wealth) if the person face type II diabetes:
+
+*Normal weight*
+
+```{r}
+nm_ev <- expected_value(
+  earnings = 0,
+  losings = -85e3,
+  probabilities = c(0.8,0.2),
+  endowment = 2e6
+)
+
+nm_eu <- expected_utility(
+  earnings = 0,
+  losings = -85e3,
+  probabilities = c(0.8,0.2),
+  endowment = 2e6,
+  u_function = sqrt
+)
+
+```
+
+A normal weight person has an expected value of `r nm_ev`
+
+*Overweight*
+
+```{r}
+ov_ev <- expected_value(
+  earnings = 0,
+  losings = -85e3,
+  probabilities = c(0.7,0.3),
+  endowment = 2e6
+)
+
+ov_eu <- expected_utility(
+  earnings = 0,
+  losings = -85e3,
+  probabilities = c(0.7,0.3),
+  endowment = 2e6,
+  u_function = sqrt
+)
+```
+
+A overweight person has an expected value of `r ov_ev`
+
+*Solve for the risk premium*
+
+We must find the value that makes the expression: $U = \sqrt(EV -RP)$$ equals to `r ov_ev`. Where $EV$ is the expected earnings (2.000.000\$) and $RP$ is the value of the risk premium.
+
+```{r}
+
+# EV is equal to the endowment
+tibble(` ` = "Risk Premium",
+       `Normal weight` = 2e6 - nm_eu^2,
+       `Overweight` = 2e6 - ov_eu^2)
+```
+
+With adverse selection, it is that the insurer will charge depending on the weight of a person, and considering a risk-neutral behavior of the insurance, the prices will equal to the marginal cost times the probability of having type II diabetes:
+
+```{r}
+  tibble(` ` = "Insurance contract",
+       `Normal weight` = 0.2*85e3,
+       `Overweight` = 0.3*85e3)
+
+```
+
+Who will take the insurance? We must compare the utilities of getting and not getting the insurance. It is, if the expected utility of being insured is higher than not getting the insurance, then the person will pay for insurance:
+
+$$
+EU(uninsured) < EU(insured)
+$$
+
+```{r}
+uninsured_n <- expected_utility(
+  earnings = 0,
+  losings = -85e3,
+  endowment = 2e6,
+  probabilities = c(0.8,0.2),
+  u_function = sqrt
+  )
+
+insured_n <- expected_utility(
+  earnings = 0,
+  losings = -0.2*85e3,
+  probabilities = c(0,1),
+  u_function = sqrt,
+  endowment = 2e6
+)
+
+
+normal_weigth <- if_else(
+  uninsured_n < insured_n,
+  "pay for the insurance.",
+  "do not pay the insurance."
+)
+```
+
+A normal weight person should `normal_weigth`
+
+```{r}
+uninsured_o <- expected_utility(
+  earnings = 0,
+  losings = -85e3,
+  endowment = 2e6,
+  probabilities = c(0.7,0.3),
+  u_function = sqrt
+  )
+
+insured_o <- expected_utility(
+  earnings = 0,
+  losings = -0.3*85e3,
+  probabilities = c(0,1),
+  u_function = sqrt,
+  endowment = 2e6
+)
+
+
+over_weigth <- if_else(
+  uninsured_o < insured_o,
+  "pay for the insurance.",
+  "do not pay the insurance."
+)
+```
+
+A overweight person should `over_weigth`.
+
+Now, in 1996 lawmakers in Massachusetts enacted a requirement that insurers
+utilize "community rating": they must charge everyone the same price. Since there are 1.000 person with normal weight and 1.000 overweight persons. The "community rate" is equal to 0.5.
+
+```{r}
+community_price <- (0.5*0.2*(85000) ) + (0.5*0.3*(85000))
+```
+
+Then this price of `community_price` will make the insurer break even. **Whit this price, who will buy the insurance?**
+
+```{r}
+uninsured_n <- expected_utility(
+  earnings = 0,
+  losings = -85e3,
+  endowment = 2e6,
+  probabilities = c(0.8,0.2),
+  u_function = sqrt
+  )
+
+insured_n <- expected_utility(
+  earnings = 0,
+  losings = -community_price,
+  probabilities = c(0,1),
+  u_function = sqrt,
+  endowment = 2e6
+)
+
+
+normal_weigth <- if_else(
+  uninsured_n < insured_n,
+  "pay for the insurance.",
+  "do not pay the insurance."
+)
+```
+
+A normal weight person should `normal_weigth`
+
+```{r}
+uninsured_o <- expected_utility(
+  earnings = 0,
+  losings = -85e3,
+  endowment = 2e6,
+  probabilities = c(0.7,0.3),
+  u_function = sqrt
+  )
+
+insured_o <- expected_utility(
+  earnings = 0,
+  losings = -community_price,
+  probabilities = c(0,1),
+  u_function = sqrt,
+  endowment = 2e6
+)
+
+
+over_weigth <- if_else(
+  uninsured_o < insured_o,
+  "pay for the insurance.",
+  "do not pay the insurance."
+)
+```
+
+A overweight person should `over_weigth`.
+
+```{r}
+
+((200*(3217-160*sqrt(383)) - 0.2*(85000)) + (150*(5651-280*sqrt(383))-0.3*(85000)))*1000 #Consumer surplus at the begining
+
+-((150*(5651-280*sqrt(383))-0.3*(85000))*1000 # Consumer surplus after
+  
+
+```
