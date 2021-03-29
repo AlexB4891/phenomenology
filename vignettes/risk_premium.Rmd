@@ -86,7 +86,7 @@ A overweight person has an expected value of `r ov_ev`
 
 *Solve for the risk premium*
 
-We must find the value that makes the expression: $U = \sqrt(EV -RP)$$ equals to `r ov_ev`. Where $EV$ is the expected earnings (2.000.000\$) and $RP$ is the value of the risk premium.
+We must find the value that makes the expression: $U = \sqrt(EV -RP)$\$ equals to `r ov_ev`. Where $EV$ is the expected earnings (2.000.000\$) and $RP$ is the value of the risk premium.
 
 ```{r}
 
@@ -165,8 +165,7 @@ over_weigth <- if_else(
 
 A overweight person should `over_weigth`.
 
-Now, in 1996 lawmakers in Massachusetts enacted a requirement that insurers
-utilize "community rating": they must charge everyone the same price. Since there are 1.000 person with normal weight and 1.000 overweight persons. The "community rate" is equal to 0.5.
+Now, in 1996 lawmakers in Massachusetts enacted a requirement that insurers utilize "community rating": they must charge everyone the same price. Since there are 1.000 person with normal weight and 1.000 overweight persons. The "community rate" is equal to 0.5.
 
 ```{r}
 community_price <- (0.5*0.2*(85000) ) + (0.5*0.3*(85000))
