@@ -2,15 +2,16 @@
 #'
 #'
 #' @param market result from `create_market` function
-#' @param market_name A title for the analized market
+#' @param market_name A title for the analyzed market
 #'
 #' @importFrom magrittr %>%
 #' @return
 #'
 #' Return a list with some elements_
-#' * `curve` PLot of the analized market
+#' * `curve` PLot of the analyzed market
 #' * `market` all the elements behind the market
-#' * `equilibrium` if at least one curve is a supply curve and at leat one is a demand curve then the equilibriums are calculated
+#' * `equilibrium` if at least one curve is a supply curve and at least one is a demand curve then
+#' the equilibriums are calculated
 #' @export
 #' @examples
 #'
@@ -75,7 +76,9 @@ linear_curve <- function(market,
 
       }) %>%
       purrr::transpose(.) %>%
-      purrr::map(~solve(.x[[1]],.x[[2]]))
+      purrr::map(~purrr::safely(solve)(.x[[1]],.x[[2]])) %>%
+      purrr::map("result") %>%
+      purrr::keep(~!is.null(.x))
 
     equilibrium <- equilibrium %>%
       purrr::map(~ t(.x) %>%
@@ -86,12 +89,26 @@ linear_curve <- function(market,
       dplyr::filter_all(dplyr::all_vars(.>0)) %>%
       tibble::rowid_to_column(.) %>%
       dplyr::mutate(eq_nam =
-                      stringr::str_c("E",rowid,
-                                     " (q*=",round(optim_q,2),
-                                     " ,p*=",round(optim_p,2),")"))
+                      stringr::str_c("E",rowid),
+                    eq_val = stringr::str_c(
+                      "E",rowid,
+                      " (q*=",round(optim_q,2),
+                      " ,p*=",round(optim_p,2),")"
+                    ))
   }
 
+# browser()
 
+  if(nrow(equilibrium)< 1){
+
+    opt <- options(show.error.messages=FALSE)
+
+    on.exit(options(opt))
+
+    message("Equilibrium is out of limits")
+
+    stop()
+  }
 
 
   market <- purrr::map2(market,
@@ -102,7 +119,7 @@ linear_curve <- function(market,
 
   price_q0 <- purrr::map(market,"coeficients") %>% purrr::reduce(max)
 
-  curves_df <-  purrr::pmap(
+  aliases <-  purrr::pmap(
     market %>%
       purrr::transpose(.),
     function(name,
@@ -113,62 +130,99 @@ linear_curve <- function(market,
              index){
 
       alias <- stringr::str_sub(name,1,1) %>%
-        stringr::str_c(.,index)
+        stringr::str_c(.,index,equation)
 
-      lim_step <- list(
-        sup_lim_y = dplyr::case_when(coeficients[2] != 0 ~ price_q0 * 1.25,
-                              TRUE ~ intercept*1.25),
 
-        sup_lim_x = dplyr::case_when(coeficients[2] != 0 ~ (intercept/((-1)*coeficients[2])) * 1.25,
-                              TRUE ~ funs(price_q0) * 1.25)
-      ) %>%
-        purrr::map(~{
-
-          val <- abs(.x)
-
-          step <- val %/% 10
-
-          step <- abs(step)
-
-          step <- dplyr::case_when(abs(step) < 1 ~ 0.1,
-                                   TRUE ~ 10^(nchar(step)))
-
-          list(
-            lim = val,
-            step = step
-          )
-        })
-
-      # browser()
-
-      table <- tibble::tibble(
-        quantity = seq(from = 0,
-                       to = lim_step$sup_lim_x$lim,
-                       by = lim_step$sup_lim_x$step)
-      )
-
-      if(coeficients[1] == 1){
-        table <- table %>%
-          dplyr::mutate(Price = funs(quantity)) %>%
-          dplyr::rename_at("quantity",~stringr::str_c(alias,equation))
-      }else if(coeficients[1] == 0){
-        table <- table %>%
-          dplyr::mutate(
-            Price = 1,
-            quantity = funs(Price)) %>%
-          dplyr::rename_at("quantity",~stringr::str_c(alias,equation))
-      }
-
-      return(table)
+      return(alias)
 
     }
-  ) %>%
-    purrr::reduce(dplyr::full_join)
+  )
+
+  limits <-
+    purrr::map(
+      .x =  list(
+        c(0,1),     # Y axis
+        c(1,0)      # X axis
+      ),
+      function(vector){
+
+        c("coeficients",
+          "intercept") %>%
+          purrr::map(
+            ~market %>%
+              purrr::map(.x)
+
+          ) %>%
+          purrr::transpose() %>%
+          purrr::map(
+            ~{
+              values <- .x
+
+              purrr::map2(
+                values,
+                list(
+                  vector,
+                  0
+                ),
+                ~rbind(.x,.y)
+              ) %>%
+                purrr::reduce(purrr::safely(solve))
+            }
+          ) %>%
+          purrr::map("result") %>%
+          purrr::keep(~!is.null(.x)) %>%
+          purrr::map(as.vector) %>%
+          unlist %>%
+          max
+
+
+      }
+    ) %>%
+    purrr::set_names(x = .,nm = c("price",
+                                  "quatity")) %>%
+    purrr::map_dfc(
+      ~seq(from = 0,to = .x,length.out = 100)
+    )
+
+
+  curves_df <- aliases %>%
+    purrr::map(~{
+
+      nam <- .x
+
+      curve <- stringr::str_replace_all(nam,"^[DS][:digit:]{1,2}","")
+
+
+      element <- purrr::keep(.x = market,
+                             .p = ~.x$equation == curve)
+
+      if(length(element)>0){
+
+        fun <- element[[1]]$funs
+
+        var <- formals(fun) %>% names
+
+        limits %>%
+          dplyr::mutate_at(.vars = var,
+                           .funs = fun) %>%
+          dplyr::filter(price <= max(limits$price),
+                        quatity <= max(limits$quatity)) %>%
+          dplyr::rename_at(c("price","quatity"),
+                           ~c("Price","value")) %>%
+          dplyr::mutate(variable = nam)
+
+      }else{
+
+        NULL
+
+      }
+
+    }) %>%
+    purrr::reduce(dplyr::bind_rows)
 
   # browser()
 
   curves_df <- curves_df %>%
-    tidyr::gather(variable,value,-Price) %>%
     dplyr::mutate(variable = stringr::str_replace(variable,"\\+ \\-","- "),
                   variable = factor(variable))
 
@@ -179,23 +233,32 @@ linear_curve <- function(market,
     plot <-
       curves_df %>%
       ggplot2::ggplot() +
-      ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable)) +
+      ggplot2::geom_line(ggplot2::aes(x = value,
+                                      y = Price,
+                                      color = variable),
+                         size = 0.8) +
       ggplot2::theme_light() +
       ggplot2::labs(x = "Quantity",
                     color = "Curve",
                     title = market_name) +
       ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
-                                                        latex2exp::TeX))
+                                                        latex2exp::TeX)) +
+      ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
+      ggplot2::scale_y_continuous(expand = c(0, 0), limits = c(0, NA))
 
   }else{
+
+    x.offset.country <- 2
+
     plot <-
       curves_df %>%
       ggplot2::ggplot() +
-      ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable)) +
+      ggplot2::geom_line(ggplot2::aes(x = value,y = Price,color = variable),size = 0.8) +
       ggplot2::theme_light() +
       ggplot2::labs(x = "Quantity",
                     color = "Curve",
-                    title = market_name) +
+                    title = market_name,
+                    subtitle = stringr::str_c(equilibrium$eq_val,collapse = "\n\n")) +
       ggplot2::geom_segment(data = equilibrium,
                             ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),
                             linetype = "dashed") +
@@ -208,8 +271,10 @@ linear_curve <- function(market,
                          ggplot2::aes(x = optim_q,y=optim_p,label =eq_nam,vjust = -1)) +
       ggplot2::geom_hline(ggplot2::aes(yintercept = 0)) +
       ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
-      ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
-                                                        latex2exp::TeX)) +
+      ggplot2::scale_color_discrete(labels = purrr::map(c(levels(curves_df$variable),equilibrium$eq_val),
+                                                        latex2exp::TeX) ) +
+      ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
+      ggplot2::scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
       ggplot2::theme_light()
 
   }
@@ -232,10 +297,18 @@ linear_curve <- function(market,
 #' \deqn{$$P = a + bx$$}
 #'
 #' @param price_q0 It's the parameter `a` and for both, demanded and/or supplied quantities are equal to 0
-#' @param slope Ir's the parameter `b` and it's the rate at wich prices changes due to a change of the quantity demanded or supplied#'
+#' @param slope Ir's the parameter `b` and it's the rate at witch prices changes due to a change of the quantity demanded or supplied
+#' @param perfect_e Perfectly __elastic__ demand (negative value) or supply (positive value)
+#' @param perfect_i Perfectly __inelastic__ demand (negative value) or supply (positive value)
 #' @return
 #'
-#' A list with all the market needed to construct our market
+#' Element of class __"market_curves"__. The result is a list with the following elements, for each of
+#' the curves:
+#' __name:__ Wether it is a demand or supply curve
+#' __funs:__ Functional form of the curve
+#' __equation:__ Latex formula to print in
+#' __coeficients:__ The value of the slopes and intercepts as matrix
+#' __intercept:__ The value of the intercept (plotting porpuses)
 #'
 #' @export
 #'
@@ -308,6 +381,8 @@ create_market <- function(price_q0,
 
   if(!is.null(perfect_e)){
 
+    # browser()
+
     perfect_elastic <- purrr::map(perfect_e,
                                   ~{
 
@@ -327,7 +402,7 @@ create_market <- function(price_q0,
                                         ) },
 
                                       equation = stringr::str_c("$: P = ",
-                                                                .x,"$"),
+                                                                abs(.x),"$"),
 
                                       coeficients= c(1, 0),
 
@@ -366,7 +441,7 @@ create_market <- function(price_q0,
                                           ) },
 
                                         equation = stringr::str_c("$: Q = ",
-                                                                  .x,"$"),
+                                                                  abs(.x),"$"),
 
                                         coeficients= c(0, 1),
 

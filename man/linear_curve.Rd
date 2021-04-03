@@ -9,14 +9,15 @@ linear_curve(market, market_name = NULL)
 \arguments{
 \item{market}{result from \code{create_market} function}
 
-\item{market_name}{A title for the analized market}
+\item{market_name}{A title for the analyzed market}
 }
 \value{
 Return a list with some elements_
 \itemize{
-\item \code{curve} PLot of the analized market
+\item \code{curve} PLot of the analyzed market
 \item \code{market} all the elements behind the market
-\item \code{equilibrium} if at least one curve is a supply curve and at leat one is a demand curve then the equilibriums are calculated
+\item \code{equilibrium} if at least one curve is a supply curve and at least one is a demand curve then
+the equilibriums are calculated
 }
 }
 \description{

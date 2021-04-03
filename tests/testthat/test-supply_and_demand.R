@@ -113,37 +113,44 @@ test_that("test_market",{
                        slope= 1,
                        perfect_e = -76)
 
+ cuve2 <- linear_curve(market = rsc2,market_name = "Market of food")
+
+ expect_is(cuve2$market,class = "ggplot")
+
+ expect_error(print(cuve2$market),NA)
+
  # Perfectly elastic supply:
- rsc3 <- create_market(price_q0 = 50,
-                       slope= -1,
-                       perfect_e = 76)
+ rsc3 <- create_market(price_q0 = c(50,60),
+                       slope= c(-1,-1),
+                       perfect_e = 26)
+
+ cuve3 <- linear_curve(market = rsc3,market_name = "Market of food")
+
+ expect_is(cuve3$market,class = "ggplot")
+
+ expect_error(print(cuve3$market),NA)
 
  # Perfectly inelastic demand:
  rsc4 <- create_market(price_q0 = 50,
                        slope= 1,
                        perfect_i = -32)
 
+ curve4 <- linear_curve(market = rsc4,market_name = "Market of food")
+
+ expect_is(curve4$market,class = "ggplot")
+
+ expect_error(print(curve4$market),NA)
+
  # Perfectly inelastic supply:
  rsc5 <- create_market(price_q0 = 50,
                        slope= -1,
                        perfect_i = 32)
 
- mkt2 <-
-   map(list(
-     rsc2,
-     rsc3,
-     rsc4,
-     rsc5
-   ),
-   linear_curve,
- "Market of food"
- )
+ curve5 <- linear_curve(market = rsc5,market_name = "Market of food")
 
+ expect_is(curve5$market,class = "ggplot")
 
- walk(mkt2,~{
-   expect_is(.x$market,class = "ggplot")
-   expect_error(print(.x$market),NA)
- })
+ expect_error(print(curve5$market),NA)
 
 
 })

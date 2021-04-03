@@ -32,6 +32,9 @@ Imports:
     rlang,
     lubridate,
     janitor,
-    latex2exp
+    latex2exp,
+    extrafont,
+    showtext,
+    sysfonts,
+    viridis
 VignetteBuilder: knitr
-

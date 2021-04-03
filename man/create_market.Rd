@@ -9,10 +9,20 @@ create_market(price_q0, slope, perfect_e = NULL, perfect_i = NULL)
 \arguments{
 \item{price_q0}{It's the parameter \code{a} and for both, demanded and/or supplied quantities are equal to 0}
 
-\item{slope}{Ir's the parameter \code{b} and it's the rate at wich prices changes due to a change of the quantity demanded or supplied#'}
+\item{slope}{Ir's the parameter \code{b} and it's the rate at witch prices changes due to a change of the quantity demanded or supplied}
+
+\item{perfect_e}{Perfectly \strong{elastic} demand (negative value) or supply (positive value)}
+
+\item{perfect_i}{Perfectly \strong{inelastic} demand (negative value) or supply (positive value)}
 }
 \value{
-A list with all the market needed to construct our market
+Element of class \strong{"market_curves"}. The result is a list with the following elements, for each of
+the curves:
+\strong{name:} Wether it is a demand or supply curve
+\strong{funs:} Functional form of the curve
+\strong{equation:} Latex formula to print in
+\strong{coeficients:} The value of the slopes and intercepts as matrix
+\strong{intercept:} The value of the intercept (plotting porpuses)
 }
 \description{
 Given a set of prices and quantities create all the market needed to
