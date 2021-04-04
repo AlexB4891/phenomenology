@@ -255,6 +255,19 @@ linear_curve <- function(market,
         )
     }
 
+<<<<<<< HEAD
+=======
+      }
+    ) %>%
+    purrr::set_names(x = .,nm = c("price",
+                                  "quatity"))
+
+
+
+    # purrr::map_dfc(
+    #   ~seq(from = 0,to = .x,length.out = 100)
+    # )
+>>>>>>> 62947286fd17ca908f785ef53e5e87a13e9506cc
 
 
   }
@@ -270,6 +283,17 @@ linear_curve <- function(market,
 
       element <- purrr::keep(.x = market,
                              .p = ~.x$equation == curve)
+
+
+      if(element[[1]]$name %>%
+        stringr::str_detect("Demand")){
+        tibble::tibble(
+          price = seq(from = limits$price,to = 0,length.out = 100),
+          quatity = seq(from = limits$price,to = 0,length.out = 100)
+        )
+      }
+
+      browser()
 
       if(length(element)>0){
 
@@ -300,7 +324,7 @@ linear_curve <- function(market,
     }) %>%
     purrr::reduce(dplyr::bind_rows)
 
-  # browser()
+  browser()
 
   curves_df <- curves_df %>%
     dplyr::mutate(variable = stringr::str_replace(variable,"\\+ \\-","- "),
@@ -337,7 +361,7 @@ linear_curve <- function(market,
       ggplot2::theme_light() +
       ggplot2::labs(x = "Quantity",
                     color = "Curve",
-                    title = market_name,
+                    title = stringr::str_to_upper(market_name),
                     subtitle = stringr::str_c(equilibrium$eq_val,collapse = "\n\n")) +
       ggplot2::geom_segment(data = equilibrium,
                             ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),

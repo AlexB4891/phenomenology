@@ -12,8 +12,19 @@ theme_phenomenon <- function(base_size = 9,
 
   PT_TO_MM <- 0.352778
 
+  colorlist <- list(background = "#1b2021",
+                    text = "#cfcec8",
+                    axis = "#c9c4c4",
+                    grid_prim = "#918f8f",
+                    grid_secun = "#c7c6c6",
+                    title = "#cfcec8",
+                    subtitle = "#f5f6f1" ,
+                    strip_back = "#3b3c39",
+                    strip_border = "#999a94"
+                    )
+
   ggplot2::update_geom_defaults("text",
-                       list(colour = "#e9be54",
+                       list(colour = colorlist$subtitle,
                             fontface = "bold"))
 
   ggplot2::update_geom_defaults("segment",
@@ -22,9 +33,6 @@ theme_phenomenon <- function(base_size = 9,
   ggplot2::update_geom_defaults("line",
                                 list(size = 1))
 
-  colorlist <- list(lt_gray = "#D9D9D9",
-                    gray = "#BFBFBF",
-                    dk_gray = "#595959")
 
 
   ggplot2::theme_bw(base_family = base_family,
@@ -34,7 +42,7 @@ theme_phenomenon <- function(base_size = 9,
 
       # Global elements:
       text = ggplot2::element_text(
-        colour = "white",
+        colour = colorlist$text,
         size = base_size,
         family = base_family,
         face = "bold"
@@ -43,44 +51,47 @@ theme_phenomenon <- function(base_size = 9,
       line = ggplot2::element_blank(),
 
       rect = ggplot2::element_rect(
-        fill = colorlist$dk_gray,
-        colour = colorlist$lt_gray
+        fill = colorlist$background,
+        colour = colorlist$background
       ),
 
       # Panel
 
       panel.grid.major = ggplot2::element_line(
         linetype = "solid",
-        colour = "white",
+        colour = colorlist$grid_prim,
         size = 0.75 * PT_TO_MM
       ),
 
       panel.grid.minor = ggplot2::element_line(
         linetype = "solid",
-        colour = "#787878"
+        colour = colorlist$grid_secun
       ),
 
       panel.background = ggplot2::element_rect(
-        fill = colorlist$dk_gray,
-        colour = colorlist$lt_gray
+        fill = colorlist$background,
+        colour = colorlist$background
       ),
 
-      panel.border = ggplot2::element_rect(colour = colorlist$dk_gray),
+      panel.border = ggplot2::element_rect(
+        colour = colorlist$background
+        ),
 
       # Axis:
 
       axis.title =  ggplot2::element_text(
-        colour = "white",
+        colour = colorlist$text,
         size = 12
       ),
 
       axis.text = ggplot2::element_text(
-        colour = "white",
+        colour = colorlist$text,
         size = 9
       ),
 
       axis.line = ggplot2::element_line(
-        colour = "white",size = 1.2
+        colour = colorlist$axis,
+        size = 1.2
       ),
 
       axis.ticks = ggplot2::element_blank(),
@@ -88,51 +99,50 @@ theme_phenomenon <- function(base_size = 9,
       # Strips (title from facets)
 
       strip.background = ggplot2::element_rect(
-        fill = "5b5b5b",
-        colour = "5b5b5b"
+        fill = colorlist$strip_back,
+        colour = colorlist$strip_border
       ),
 
       strip.text = ggplot2::element_text(
-        colour = "white",
+        colour = colorlist$text,
         size = 9
       ),
 
 
-      # title = ggplot2::element_text(
-      #   face = "plain",
-      #   hjust = 0.5
-      # ),
-
       # Plot
+      title = ggplot2::element_text(
+        size = 48,
+        hjust = 1
+      ),
 
       plot.title = ggplot2::element_text(
-        size = 20,
-        hjust = 0.5
+        size = 48,
+        hjust = 1
       ),
 
       plot.subtitle = ggplot2::element_text(
         size = 10,
         margin = ggplot2::margin(0,0,20,0),
-        colour = "#e9be54"
+        colour = colorlist$subtitle
       ),
 
       # Legend:
 
       legend.text = ggplot2::element_text(
         size = 9,
-        colour = "white"
+        colour = colorlist$text
       ),
 
       # legend.title = ggplot2::element_blank(),
 
       legend.key =  ggplot2::element_rect(
         colour = "transparent",
-        fill = colorlist$dk_gray
+        fill = colorlist$background
         ),
 
       legend.box.background = ggplot2::element_rect(
-        fill = colorlist$lt_gray,
-        colour = colorlist$dk_gray
+        fill = colorlist$background,
+        colour = colorlist$background
       )
     )
 }
