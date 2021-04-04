@@ -202,9 +202,14 @@ linear_curve <- function(market,
 
         var <- formals(fun) %>% names
 
+        vars <- c("price","quatity")
+
+        objecive <- vars[vars != var]
+
+
         limits %>%
-          dplyr::mutate_at(.vars = var,
-                           .funs = fun) %>%
+          dplyr::mutate(!!rlang::sym(objecive) :=
+                          fun(!!rlang::sym(var))) %>%
           dplyr::filter(price <= max(limits$price),
                         quatity <= max(limits$quatity)) %>%
           dplyr::rename_at(c("price","quatity"),
