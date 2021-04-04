@@ -97,17 +97,19 @@ linear_curve <- function(market,
                     ))
   }
 
-# browser()
+  # browser()
 
-  if(nrow(equilibrium)< 1){
+  if(!is.null(equilibrium) & is.data.frame(equilibrium)){
 
-    opt <- options(show.error.messages=FALSE)
+    if(nrow(equilibrium) <1){
+      opt <- options(show.error.messages=FALSE)
 
-    on.exit(options(opt))
+      on.exit(options(opt))
 
-    message("Equilibrium is out of limits")
+      message("Equilibrium is out of limits")
 
-    stop()
+      stop()
+    }
   }
 
 
@@ -138,52 +140,125 @@ linear_curve <- function(market,
     }
   )
 
-  limits <-
-    purrr::map(
-      .x =  list(
-        c(0,1),     # Y axis
-        c(1,0)      # X axis
-      ),
-      function(vector){
 
-        c("coeficients",
-          "intercept") %>%
-          purrr::map(
-            ~market %>%
-              purrr::map(.x)
+  length_market <- aliases %>%
+    stringr::str_sub(start = 1,end = 1) %>%
+    unique %>%
+    length
 
-          ) %>%
-          purrr::transpose() %>%
-          purrr::map(
-            ~{
-              values <- .x
+  if(length_market == 2){
 
-              purrr::map2(
-                values,
-                list(
-                  vector,
-                  0
-                ),
-                ~rbind(.x,.y)
-              ) %>%
-                purrr::reduce(purrr::safely(solve))
-            }
-          ) %>%
-          purrr::map("result") %>%
-          purrr::keep(~!is.null(.x)) %>%
-          purrr::map(as.vector) %>%
-          unlist %>%
-          max
+    limits <-
+      purrr::map(
+        .x =  list(
+          c(0,1),     # Y axis
+          c(1,0)      # X axis
+        ),
+        function(vector){
+
+          c("coeficients",
+            "intercept") %>%
+            purrr::map(
+              ~market %>%
+                purrr::map(.x)
+
+            ) %>%
+            purrr::transpose() %>%
+            purrr::map(
+              ~{
+                values <- .x
+
+                purrr::map2(
+                  values,
+                  list(
+                    vector,
+                    0
+                  ),
+                  ~rbind(.x,.y)
+                ) %>%
+                  purrr::reduce(purrr::safely(solve))
+              }
+            ) %>%
+            purrr::map("result") %>%
+            purrr::keep(~!is.null(.x)) %>%
+            purrr::map(as.vector) %>%
+            unlist %>%
+            max
 
 
-      }
-    ) %>%
-    purrr::set_names(x = .,nm = c("price",
-                                  "quatity")) %>%
-    purrr::map_dfc(
-      ~seq(from = 0,to = .x,length.out = 100)
-    )
+        }
+      ) %>%
+      purrr::set_names(x = .,nm = c("price",
+                                    "quatity")) %>%
+      purrr::map_dfc(
+        ~seq(from = 0,to = .x,length.out = 100)
+      )
 
+  }else if(length_market == 1){
+    limits <-
+      purrr::map(
+        .x =  list(
+          c(0,1),     # Y axis
+          c(1,0)      # X axis
+        ),
+        function(vector){
+
+          c("coeficients",
+            "intercept") %>%
+            purrr::map(
+              ~market %>%
+                purrr::map(.x)
+
+            ) %>%
+            purrr::transpose() %>%
+            purrr::map(
+              ~{
+                values <- .x
+
+                purrr::map2(
+                  values,
+                  list(
+                    vector,
+                    0
+                  ),
+                  ~rbind(.x,.y)
+                ) %>%
+                  purrr::reduce(purrr::safely(solve))
+              }
+            ) %>%
+            purrr::map("result") %>%
+            purrr::keep(~!is.null(.x)) %>%
+            purrr::map(as.vector) %>%
+            unlist %>%
+            max
+
+
+        }
+      ) %>%
+      unlist
+
+    if(sum(limits == 0) == 1){
+      limits <- rep(sum(limits),2)
+
+      limits <-
+        purrr::set_names(x = limits*4,nm = c("price",
+                                             "quatity")) %>%
+        purrr::map_dfc(
+          ~seq(from = 0,to = .x,length.out = 100)
+        )
+    }else{
+      limits <-
+        purrr::set_names(x = limits,nm = c("price",
+                                            "quatity")) %>%
+        purrr::map_dfc(
+          ~seq(from = 0,to = .x,length.out = 100)
+        )
+    }
+
+
+
+  }
+# browser()
 
   curves_df <- aliases %>%
     purrr::map(~{
@@ -475,3 +550,86 @@ create_market <- function(price_q0,
   return(resources)
 }
 
+
+#' Anotate a shock:
+#'
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
+annotate_shock <- function(...){
+
+  market <- create_market(price_q0 = c(100,200,300,400),
+                          slope = c(10,10,-10,-10))
+
+
+  resources <- linear_curve(market = market,
+                            market_name = "Example")
+
+
+  movement <- resources$cross_points %>%
+    dplyr::select(rowid,matches("optim")) %>%
+    tidyr::gather(key = "value",value = "points",-rowid) %>%
+    dplyr::mutate(value = stringr::str_c(value,rowid),
+                  rowid = 1) %>%
+    tidyr::spread(key = value,value = points)
+
+
+  # movement %>%
+  #   ggplot2::ggplot() +
+  #   ggplot2::geom_segment(
+  #     ggplot2::aes(x = optim_q1,
+  #                  xend = optim_q2,
+  #                  y = optim_p1,
+  #                  yend = optim_p2)
+  #   )
+
+
+  png(filename = "~/market_example.png",
+      res = 250,
+      width = 7,
+      height = 5,
+      units = "in")
+
+  resources$market +
+
+    ggplot2::geom_segment(
+      data = movement,
+      ggplot2::aes(x = optim_q1,
+                   xend = optim_q2,
+                   y = optim_p1,
+                   yend = optim_p2),
+      arrow = ggplot2::arrow(
+        length = ggplot2::unit(0.5,"cm")
+      ),
+      size = 1
+    ) +
+    ggplot2::geom_segment(
+      data = movement,
+      ggplot2::aes(x = optim_q1/2,
+                   xend = optim_q1/2,
+                   y = optim_p1,
+                   yend = optim_p2),
+      arrow = ggplot2::arrow(ends = "both",
+                             length = ggplot2::unit(0.5,"cm")
+      ),
+      size = 0.5,
+      linetype = 2
+    )  +
+    ggplot2::geom_text(
+      data = movement,
+      ggplot2::aes(
+        x = optim_q1/2,
+        y = (optim_p1 + optim_p2 )/2,
+        label = "+ Price effect"
+      ),
+      size = 4,
+      color = "#7a7472"
+    )
+
+
+  dev.off()
+
+}
