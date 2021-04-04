@@ -249,29 +249,16 @@ linear_curve <- function(market,
     }else{
       limits <-
         purrr::set_names(x = limits,nm = c("price",
-                                            "quatity")) %>%
+                                           "quatity")) %>%
         purrr::map_dfc(
           ~seq(from = 0,to = .x,length.out = 100)
         )
     }
 
-<<<<<<< HEAD
-=======
-      }
-    ) %>%
-    purrr::set_names(x = .,nm = c("price",
-                                  "quatity"))
-
-
-
-    # purrr::map_dfc(
-    #   ~seq(from = 0,to = .x,length.out = 100)
-    # )
->>>>>>> 62947286fd17ca908f785ef53e5e87a13e9506cc
 
 
   }
-# browser()
+  # browser()
 
   curves_df <- aliases %>%
     purrr::map(~{
@@ -283,17 +270,6 @@ linear_curve <- function(market,
 
       element <- purrr::keep(.x = market,
                              .p = ~.x$equation == curve)
-
-
-      if(element[[1]]$name %>%
-        stringr::str_detect("Demand")){
-        tibble::tibble(
-          price = seq(from = limits$price,to = 0,length.out = 100),
-          quatity = seq(from = limits$price,to = 0,length.out = 100)
-        )
-      }
-
-      browser()
 
       if(length(element)>0){
 
@@ -324,7 +300,7 @@ linear_curve <- function(market,
     }) %>%
     purrr::reduce(dplyr::bind_rows)
 
-  browser()
+  # browser()
 
   curves_df <- curves_df %>%
     dplyr::mutate(variable = stringr::str_replace(variable,"\\+ \\-","- "),
@@ -346,9 +322,10 @@ linear_curve <- function(market,
                     color = "Curve",
                     title = market_name) +
       ggplot2::scale_color_discrete(labels = purrr::map(levels(curves_df$variable),
-                                                        latex2exp::TeX)) +
-      ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
-      ggplot2::scale_y_continuous(expand = c(0, 0), limits = c(0, NA))
+                                                        latex2exp::TeX))
+    # +
+    #   ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
+    #   ggplot2::scale_y_continuous(expand = c(0, 0), limits = c(0, NA))
 
   }else{
 
@@ -361,7 +338,7 @@ linear_curve <- function(market,
       ggplot2::theme_light() +
       ggplot2::labs(x = "Quantity",
                     color = "Curve",
-                    title = stringr::str_to_upper(market_name),
+                    title = market_name,
                     subtitle = stringr::str_c(equilibrium$eq_val,collapse = "\n\n")) +
       ggplot2::geom_segment(data = equilibrium,
                             ggplot2::aes(y = optim_p,yend =optim_p, x = 0,xend = optim_q),
@@ -377,8 +354,8 @@ linear_curve <- function(market,
       ggplot2::geom_vline(ggplot2::aes(xintercept = 0)) +
       ggplot2::scale_color_discrete(labels = purrr::map(c(levels(curves_df$variable),equilibrium$eq_val),
                                                         latex2exp::TeX) ) +
-      ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
-      ggplot2::scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
+      # ggplot2::scale_x_continuous(expand = c(0, 0), limits = c(0, NA)) +
+      # ggplot2::scale_y_continuous(expand = c(0, 0), limits = c(0, NA)) +
       ggplot2::theme_light()
 
   }
@@ -585,8 +562,8 @@ create_market <- function(price_q0,
 #' @examples
 annotate_shock <- function(...){
 
-  market <- create_market(price_q0 = c(100,200,300,400),
-                          slope = c(10,10,-10,-10))
+  market <- create_market(price_q0 = c(0,50,200),
+                          slope = c(10,10,-10))
 
 
   resources <- linear_curve(market = market,
@@ -613,9 +590,31 @@ annotate_shock <- function(...){
 
   png(filename = "~/market_example.png",
       res = 250,
-      width = 7,
-      height = 5,
+      width = 9,
+      height = 6,
       units = "in")
+
+  fixed_q <- c("coeficients","intercept") %>%
+    purrr::map(~{
+      resources$curves[[2]] %>%
+        purrr::pluck(.x)
+    }) %>%
+    purrr::map2(
+      .y = list(
+        c(1,0),
+        c(movement$optim_p1)
+      ),
+      ~rbind(.x,.y)
+    ) %>%
+    purrr::reduce(solve) %>%
+    as.vector
+
+  effects <- tibble::tibble(
+    optim_q1 = fixed_q[2],
+    optim_q2 = movement$optim_q2,
+    optim_q3 = movement$optim_q1
+  )
+
 
   resources$market +
 
@@ -630,30 +629,120 @@ annotate_shock <- function(...){
       ),
       size = 1
     ) +
-    ggplot2::geom_segment(
-      data = movement,
-      ggplot2::aes(x = optim_q1/2,
-                   xend = optim_q1/2,
-                   y = optim_p1,
-                   yend = optim_p2),
-      arrow = ggplot2::arrow(ends = "both",
-                             length = ggplot2::unit(0.5,"cm")
-      ),
-      size = 0.5,
-      linetype = 2
-    )  +
     ggplot2::geom_text(
       data = movement,
       ggplot2::aes(
-        x = optim_q1/2,
+        x = - optim_q1/5,
         y = (optim_p1 + optim_p2 )/2,
-        label = "+ Price effect"
+        label = "Tax"
       ),
       size = 4,
       color = "#7a7472"
-    )
+    ) +
+    ggplot2::geom_rect(
+      ggplot2::aes(
+        xmin = -Inf,
+        xmax = 0,
+        ymin = min(Price),
+        ymax = max(Price)
+      ),
+      fill = 'transparent'
+    ) +
+    ggplot2::geom_segment(
+      data = movement,
+      ggplot2::aes(x = -optim_q1/10,
+                   xend = -optim_q1/10,
+                   y = optim_p1,
+                   yend = optim_p2),
+      arrow = ggplot2::arrow(ends = "both",
+                             length = ggplot2::unit(0.2,"cm")
+      ),
+      size = 0.5
+    ) +
+    ggpubr::geom_bracket(
+      xmin = effects$optim_q3,
+      xmax = effects$optim_q1,
+      label = stringr::str_c("Income effect","\n"," \u2190"),
+      y.position = (movement$optim_p1)*0.8
+    ) +
+    ggpubr::geom_bracket(
+      xmin = effects$optim_q2,
+      xmax = effects$optim_q1,
+      label = stringr::str_c("Substitution effect","\n"," \u2192"),
+      y.position = (movement$optim_p1)*0.4
+    ) +
+    ggplot2::theme_minimal()
 
 
   dev.off()
 
 }
+
+
+#' Title
+#'
+#' @param ...
+#'
+#' @return
+#' @export
+#'
+#' @examples
+annotate_surplus <- function(...){
+
+  market <- create_market(price_q0 = c(0,50,200),
+                          slope = c(10,10,-10))
+
+
+  resources <- linear_curve(market = market,
+                            market_name = "Example")
+
+
+  movement <- resources$cross_points %>%
+    dplyr::select(rowid,matches("optim")) %>%
+    tidyr::gather(key = "value",value = "points",-rowid) %>%
+    dplyr::mutate(value = stringr::str_c(value,rowid),
+                  rowid = 1) %>%
+    tidyr::spread(key = value,value = points)
+
+
+  # movement %>%
+  #   ggplot2::ggplot() +
+  #   ggplot2::geom_segment(
+  #     ggplot2::aes(x = optim_q1,
+  #                  xend = optim_q2,
+  #                  y = optim_p1,
+  #                  yend = optim_p2)
+  #   )
+
+
+  png(filename = "~/market_example.png",
+      res = 250,
+      width = 9,
+      height = 6,
+      units = "in")
+
+  fixed_q <- c("coeficients","intercept") %>%
+    purrr::map(~{
+      resources$curves[[2]] %>%
+        purrr::pluck(.x)
+    }) %>%
+    purrr::map2(
+      .y = list(
+        c(1,0),
+        c(movement$optim_p1)
+      ),
+      ~rbind(.x,.y)
+    ) %>%
+    purrr::reduce(solve) %>%
+    as.vector
+
+  effects <- tibble::tibble(
+    optim_q1 = fixed_q[2],
+    optim_q2 = movement$optim_q2,
+    optim_q3 = movement$optim_q1
+  )
+
+  dev.off()
+}
+
+

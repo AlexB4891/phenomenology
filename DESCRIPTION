@@ -36,5 +36,6 @@ Imports:
     extrafont,
     showtext,
     sysfonts,
-    viridis
+    viridis,
+    ggpubr
 VignetteBuilder: knitr
