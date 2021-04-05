@@ -51,10 +51,16 @@ linear_curve <- function(market,
       purrr::map(~1:length(.x)) %>%
       purrr::reduce(c)
 
-    d_curves <- market %>% purrr::keep(.p = ~ .x$name == "Demand curve")
+    d_curves <- market %>%
+      purrr::keep(.p = ~ .x$name == "Demand curve")
 
-    s_curves <- market %>% purrr::keep(.p = ~ .x$name == "Supply curve")
+    s_curves <- market %>%
+      purrr::keep(.p = ~ .x$name == "Supply curve")
 
+    market <- append(
+      d_curves,
+      s_curves
+    )
 
     equilibrium <- c("coeficients","intercept") %>%
       purrr::map(~{
@@ -140,6 +146,8 @@ linear_curve <- function(market,
     }
   )
 
+
+  # browser()
 
   length_market <- aliases %>%
     stringr::str_sub(start = 1,end = 1) %>%
@@ -616,7 +624,7 @@ annotate_shock <- function(...){
   )
 
 
-  resources$market +
+  shock <- resources$market +
 
     ggplot2::geom_segment(
       data = movement,
@@ -689,6 +697,10 @@ annotate_shock <- function(...){
 #' @examples
 annotate_surplus <- function(...){
 
+
+
+
+
   market <- create_market(price_q0 = c(0,50,200),
                           slope = c(10,10,-10))
 
@@ -705,21 +717,6 @@ annotate_surplus <- function(...){
     tidyr::spread(key = value,value = points)
 
 
-  # movement %>%
-  #   ggplot2::ggplot() +
-  #   ggplot2::geom_segment(
-  #     ggplot2::aes(x = optim_q1,
-  #                  xend = optim_q2,
-  #                  y = optim_p1,
-  #                  yend = optim_p2)
-  #   )
-
-
-  png(filename = "~/market_example.png",
-      res = 250,
-      width = 9,
-      height = 6,
-      units = "in")
 
   fixed_q <- c("coeficients","intercept") %>%
     purrr::map(~{
@@ -741,6 +738,118 @@ annotate_surplus <- function(...){
     optim_q2 = movement$optim_q2,
     optim_q3 = movement$optim_q1
   )
+
+ previos <-  resources$market +
+  ggplot2::geom_ribbon(
+    data = resources$market$data %>%
+      dplyr::filter(dplyr::between(value,0,effects$optim_q3),
+                    dplyr::between(Price,
+                            movement$optim_p1,
+                            resources$curves[[3]]$intercept),
+                    stringr::str_detect(variable,"D")),
+    ggplot2::aes(
+      x = value,
+      y = Price,
+      xmin = 0,
+      xmax = effects$optim_q3,
+      ymin = movement$optim_p1,
+      ymax = Price
+    ),
+    alpha = 0.2,
+    fill = "Blue"
+  ) +
+    ggplot2::geom_ribbon(
+      data = resources$market$data %>%
+        dplyr::filter(dplyr::between(value,0,effects$optim_q3),
+                      dplyr::between(Price,
+                                     0,
+                                     movement$optim_p1),
+                      stringr::str_detect(variable,"S.*P = 0")),
+      ggplot2::aes(
+        x = value,
+        y = Price,
+        xmin = 0,
+        xmax = effects$optim_q3,
+        ymin = Price,
+        ymax = movement$optim_p1
+      ),
+      alpha = 0.2,
+      fill = "red"
+    )
+
+
+
+after <- resources$market +
+   ggplot2::geom_ribbon(
+     data = resources$market$data %>%
+       dplyr::filter(dplyr::between(value,0,effects$optim_q2),
+                     dplyr::between(Price,
+                                    movement$optim_p2,
+                                    resources$curves[[3]]$intercept),
+                     stringr::str_detect(variable,"D")),
+     ggplot2::aes(
+       x = value,
+       y = Price,
+       xmin = 0,
+       xmax = effects$optim_q2,
+       ymin = movement$optim_p2,
+       ymax = Price
+     ),
+     alpha = 0.2,
+     fill = "Blue"
+   ) +
+   ggplot2::geom_ribbon(
+     data = resources$market$data %>%
+       dplyr::filter(dplyr::between(value,0,effects$optim_q2),
+                     dplyr::between(Price,
+                                    0,
+                                    movement$optim_p2),
+                     stringr::str_detect(variable,"S.*P = 50")),
+     ggplot2::aes(
+       x = value,
+       y = Price,
+       xmin = 0,
+       xmax = effects$optim_q3,
+       ymin = Price,
+       ymax = movement$optim_p2
+     ),
+     alpha = 0.2,
+     fill = "red"
+   ) +
+   ggplot2::geom_ribbon(
+     data = resources$market$data %>%
+       dplyr::filter(dplyr::between(value,effects$optim_q1,effects$optim_q3),
+                     dplyr::between(Price,
+                                    movement$optim_p1,
+                                    movement$optim_p2),
+                     stringr::str_detect(variable,"S.*P = 50|D")),
+     ggplot2::aes(
+       x = value,
+       y = Price,
+       xmin = effects$optim_q1,
+       xmax = effects$optim_q3,
+       ymin = movement$optim_p1,
+       ymax = Price
+     ),
+     alpha = 0.2,
+     fill = "green"
+   )
+
+
+
+
+png(filename = "~/market_example.png",
+      res = 250,
+      width = 19,
+      height = 13,
+      units = "in")
+
+
+ggpubr::ggarrange(
+  resources$market,shock,previos,after,ncol = 2,
+  nrow = 2
+)
+
 
   dev.off()
 }

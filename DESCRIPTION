@@ -37,5 +37,6 @@ Imports:
     showtext,
     sysfonts,
     viridis,
-    ggpubr
+    ggpubr,
+    gganimate
 VignetteBuilder: knitr
