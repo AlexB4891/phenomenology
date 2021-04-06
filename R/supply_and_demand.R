@@ -312,7 +312,9 @@ linear_curve <- function(market,
 
   curves_df <- curves_df %>%
     dplyr::mutate(variable = stringr::str_replace(variable,"\\+ \\-","- "),
-                  variable = factor(variable))
+                  variable = factor(variable)) %>%
+    dplyr::filter(value > 0,
+                  Price > 0)
 
 
   # browser()
@@ -560,23 +562,166 @@ create_market <- function(price_q0,
 }
 
 
-#' Anotate a shock:
+#' Analize a market after a shock:
 #'
-#' @param ...
+#' @param market A simple market with supply and demand produced by `create_market`
+#' function. The element is a list of class __market_curves__
+#' @param curve String with the curve(s) name that get the shock.
+#' Use "demand" or "supply"
+#' @param shock_name A name from the shock. Default value: "Tax"
+#' @param p_delta `p_delta` and `q_delta` works together with the `percent` argument.
+#' If `percent` is `TRUE` then all prices are multiplied by the value declared. Otherwise
+#' if `percent` is `FALSE` the curve moves in or out by a constant value.
+#' @param q_delta p_delta `p_delta` and `q_delta` works together with the `percent` argument.
+#' If `percent` is `TRUE` then all prices are multiplied by the value declared. Otherwise
+#' if `percent` is `FALSE` the curve moves in or out by a constant value.
+#' @param slope_change To wich value the slope of the curve should change.
+#' @param percent  If the shock is a percentage (15% tax over supply) use `TRUE`,
+#' else, a constant is summed to the curve.
 #'
-#' @return
+#' @return List with:
+#'
+#' * Original market plot
+#' * Income and substitution effect plot
+#' * Consumer and producer surplus before shock
+#' * Consumer and producer surplus after shock
+#' * Table with
+#'     * Elasticities at equilibrium (before and after)
+#'     * Surplus (before and after)
+#'     * Income and substitution effect
+#'
 #' @export
 #'
 #' @examples
-annotate_shock <- function(...){
+shock_over_market <- function( market,
+                               curve,
+                               shock_name = "Tax",
+                               p_delta = 0.15,
+                               q_delta = 0,
+                               slope_change = 0,
+                               percent = TRUE
+){
 
-  market <- create_market(price_q0 = c(0,50,200),
-                          slope = c(10,10,-10))
+prior <- linear_curve(market,"Example")
 
+#   market <- create_market(price_q0 = c(0,50),
+#                           slope = c(10,-10))
+
+  valid_market <- market %>%
+    purrr::map("name") %>%
+    unlist %>%
+    table %>%
+    tibble::enframe() %>%
+    dplyr::filter(value>1)
+
+  if(nrow(valid_market) > 0){
+    msm <- valid_market %>%
+      dplyr::pull(name) %>%
+      stringr::str_c("Too much ",.,"s!")
+
+    stop(msm)
+  }
+
+  if(length(curve) != length(shock_name)){
+    stop("Not enough shock names!")
+  }
+
+  if(length(curve) != length(p_delta)){
+    stop("Not enough price deltas!")
+  }
+
+  if(length(curve) != length(q_delta)){
+    stop("Not enough quantity deltas!")
+  }
+
+  if(length(curve) != length(percent)){
+    stop("Not enough measures of shock!")
+  }
+
+  if(length(curve) != length(slope_change)){
+    stop("Not enough cahnges in slopes!")
+  }
+
+  shocks <- list(curve = curve,
+       shock_name = shock_name,
+       p_delta = p_delta,
+       q_delta = q_delta,
+       slope_change = slope_change,
+       percent = percent
+  ) %>%
+    purrr::pmap(
+      function(curve,
+               shock_name,
+               p_delta,
+               q_delta,
+               slope_change,
+               percent){
+
+        objective_curve <- stringr::str_to_sentence(curve)
+
+        objective_curve <- market %>%
+          purrr::keep(.p = ~ stringr::str_detect(.x[["name"]],
+                                                 objective_curve))
+
+
+
+        slopes <- objective_curve %>%
+          purrr::map("coeficients")
+
+
+        slope_shock <- slopes[[1]][2]*(-1)
+
+
+        intercept <- objective_curve %>%
+          purrr::map("intercept")
+
+
+        x_intercept <- solve(
+          rbind(slopes[[1]],
+                c(1,0)),
+          c(intercept[[1]],0)
+        )
+
+        x_intercept <- x_intercept[2]
+
+
+        if(percent){
+          x_intercept <- x_intercept * (1 + q_delta)
+        }else{
+          x_intercept <- x_intercept  + q_delta
+        }
+
+
+        slope_shock <- slope_shock*(1 + slope_change)
+
+
+        intercept_shock <- abs(x_intercept*slope_shock)
+
+        if(percent){
+          intercept_shock <- intercept_shock * (1 + p_delta)
+        }else{
+          intercept_shock <- intercept_shock + p_delta
+        }
+
+        # browser()
+
+        create_market(price_q0 = intercept_shock,
+                      slope = slope_shock)
+
+      })   %>%
+    purrr::flatten() %>%
+    purrr::map(~append(.x,list(type = "shock")))
+
+
+  market <- append(market,shocks)
+
+  market <- structure(market,class = "market_curves")
 
   resources <- linear_curve(market = market,
                             market_name = "Example")
 
+
+# browser()
 
   movement <- resources$cross_points %>%
     dplyr::select(rowid,matches("optim")) %>%
@@ -596,15 +741,15 @@ annotate_shock <- function(...){
   #   )
 
 
-  png(filename = "~/market_example.png",
-      res = 250,
-      width = 9,
-      height = 6,
-      units = "in")
+  # png(filename = "~/market_example.png",
+  #     res = 250,
+  #     width = 9,
+  #     height = 6,
+  #     units = "in")
 
   fixed_q <- c("coeficients","intercept") %>%
     purrr::map(~{
-      resources$curves[[2]] %>%
+      resources$curves[[3]] %>% ### Define shock curve
         purrr::pluck(.x)
     }) %>%
     purrr::map2(
@@ -642,7 +787,7 @@ annotate_shock <- function(...){
       ggplot2::aes(
         x = - optim_q1/5,
         y = (optim_p1 + optim_p2 )/2,
-        label = "Tax"
+        label = shock_name
       ),
       size = 4,
       color = "#7a7472"
@@ -682,7 +827,13 @@ annotate_shock <- function(...){
     ggplot2::theme_minimal()
 
 
-  dev.off()
+
+  ggpubr::ggarrange(
+    prior$market +
+      ggplot2::theme_minimal(),
+    shock,ncol = 2,
+    nrow = 1,align = "h"
+  )
 
 }
 
