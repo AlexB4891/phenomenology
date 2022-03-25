@@ -1,5 +1,12 @@
 .Rproj.user
 .Rhistory
+<<<<<<< HEAD
 .Rdata
 .httr-oauth
 .DS_Store
+=======
+.RData
+inst/doc
+doc
+Meta
+>>>>>>> origin/initial

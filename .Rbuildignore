@@ -1,4 +1,9 @@
 ^phenomenology\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+<<<<<<< HEAD
 ^README\.Rmd$
+=======
+^doc$
+^Meta$
+>>>>>>> origin/initial

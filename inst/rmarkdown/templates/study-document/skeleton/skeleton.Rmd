@@ -1,0 +1,35 @@
+---
+title: "Study document"
+subtitle: "Template for studying for the proctorate exams"
+author: "Alex Bajaña"
+address: Quito, Ecuador
+date: '`r format(Sys.Date(), "%d\\- %m\\- %Y")`'  # today
+fontfamily: accanthis
+fontsize: 11pt
+graphics: null
+papersize: 
+geometry: margin=1.0in
+classoption:
+  - a4paper
+lang: en
+lof: yes
+lot: yes
+toc: yes
+UP_title: yes
+UP_subtitle: yes
+shaded_quote: yes
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(scales)
+library(lubridate)
+```
+
+## General description:
+
+## Questions:
+
+## Answers:
