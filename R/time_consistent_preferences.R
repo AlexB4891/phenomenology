@@ -5,7 +5,7 @@
 #' @param beta Discount rate relative to today
 #' @param delta Discount rate fo eah period in the future
 #' @param periods Number of periods in the future that we want to discount exponentially
-#'
+#' @export
 #' @return Exponentially discounted value of utility function
 #'
 #' @examples
@@ -29,11 +29,10 @@ exponential_discount <- function(consumption,
 #' @param periods Number of periods in the future that we want to discount exponentially
 #' @param start Equals to 0 if the consumption begin today, any other value means that the consumption
 #' starts in the future
-#'
+#' @export
 #' @return Present value of utility after discounting the future utility in today terms
 #'
 #' @examples
-#' @importFrom dplyr
 lifetime_utility_function <- function(c_t,
                                       c_t_1,
                                       start,

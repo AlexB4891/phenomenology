@@ -12,7 +12,6 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-<<<<<<< HEAD
 RoxygenNote: 7.1.2
 Imports: 
     dplyr,
@@ -24,32 +23,19 @@ Imports:
     scales,
     stringr,
     tibble,
-    tidyr
-Suggests: 
-    testthat (>= 3.0.0)
-Config/testthat/edition: 3
-=======
-RoxygenNote: 7.1.1
-Suggests: 
-    testthat,
-    knitr,
-    rmarkdown
-Depends: 
-    R (>= 2.10)
-Imports: 
-    purrr,
-    ggplot2,
-    tibble,
-    dplyr,
-    tidyr,
-    magrittr,
     forcats,
-    readr,
-    stringr,
+    tidyr,
     rlang,
     lubridate,
     janitor,
+    readr,
     latex2exp
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
+Config/testthat/edition: 3
+Depends: 
+    R (>= 2.10)
 VignetteBuilder: knitr
 
->>>>>>> origin/initial

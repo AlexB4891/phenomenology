@@ -10,7 +10,7 @@
 #' @param probabilities set of probabilities for the options of the bet
 #' (the order should be as follows c(earnings,losings) )
 #' @param endowment Initial endowment
-#'
+#' @export
 #' @return Expected value of a bet
 #'
 #' @examples
@@ -57,7 +57,7 @@ expected_value <- function(earnings = c(),
 #' (the order should be as follows c(earnings,losings) )
 #' @param endowment Initial endowment
 #' @param u_function Form of the utility function
-#'
+#' @export
 #' @return Expected utility from a bet
 #'
 #' @examples

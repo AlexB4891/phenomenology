@@ -69,10 +69,10 @@ str(market)
 
 Now we have a little more complex structure. As you can see when I declared just the demand curve, I got a list of 5 elements that defines the curve (see package documentation). Now I got a nested list with that same structure but defined for each pair of `price_q0` and `slope`. And so easy you have your market definition.
 
-Until now we build our materials to make the analysis. Now let me introduce the `supply_and_demand` package.
+Until now we build our materials to make the analysis. Now let me introduce the `linear_curve` package.
 
 ```{r analysis}
-analisis <- supply_and_demand(market = market,
+analisis <- linear_curve(market = market,
              market_name = "Chocolate market in black market")
 
 names(analisis)

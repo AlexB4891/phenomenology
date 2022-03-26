@@ -16,6 +16,8 @@ knitr::opts_chunk$set(
 
 ```{r setup}
 library(phenomenology)
+library(tibble)
+library(dplyr)
 ```
 
 -   Total wealth during the life time is 2.000.000\$.
@@ -227,11 +229,11 @@ over_weigth <- if_else(
 
 A overweight person should `over_weigth`.
 
-```{r}
+<!-- ```{r} -->
 
-((200*(3217-160*sqrt(383)) - 0.2*(85000)) + (150*(5651-280*sqrt(383))-0.3*(85000)))*1000 #Consumer surplus at the begining
+<!-- ((200*(3217-160*sqrt(383)) - 0.2*(85000)) + (150*(5651-280*sqrt(383))-0.3*(85000)))*1000 #Consumer surplus at the begining -->
 
--((150*(5651-280*sqrt(383))-0.3*(85000))*1000 # Consumer surplus after
-  
+<!-- -((150*(5651-280*sqrt(383))-0.3*(85000))*1000 # Consumer surplus after -->
 
-```
+
+<!-- ``` -->
