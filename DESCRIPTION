@@ -29,7 +29,9 @@ Imports:
     lubridate,
     janitor,
     readr,
-    latex2exp
+    latex2exp,
+    ggalt,
+    fuzzyjoin
 Suggests: 
     knitr,
     rmarkdown,
@@ -38,4 +40,3 @@ Config/testthat/edition: 3
 Depends: 
     R (>= 2.10)
 VignetteBuilder: knitr
-
